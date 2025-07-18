@@ -1,75 +1,14 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
+import { initializeApp } from "firebase/app";
 
-const app = express();
-app.use(express.json());
-
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'API Protegida com JWT',
-      version: '1.0.0',
-      description: 'Exemplo de autenticação e documentação Swagger',
-    },
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-    security: [{ bearerAuth: [] }],
-  },
-  apis: ['./app.js'],
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "seu-projeto.firebaseapp.com",
+  projectId: "seu-projeto",
+  storageBucket: "seu-projeto.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abc123def456"
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const firebaseApp = initializeApp(firebaseConfig);
 
-function auth(req, res, next) {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ msg: 'Acesso negado. Token ausente.' });
-  try {
-    const decoded = jwt.verify(token, 'segredo123');
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ msg: 'Token inválido.' });
-  }
-}
-
-const users = [];
-
-app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  const passwordHash = await bcrypt.hash(password, 10);
-  const id = users.length + 1;
-  users.push({ id, username, passwordHash });
-  res.json({ msg: 'Usuário registrado com sucesso' });
-});
-
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  const user = users.find(u => u.username === username);
-  if (!user) return res.status(400).json({ msg: 'Usuário não encontrado' });
-  const isMatch = await bcrypt.compare(password, user.passwordHash);
-  if (!isMatch) return res.status(400).json({ msg: 'Senha incorreta' });
-  const token = jwt.sign({ id: user.id, username: user.username }, 'segredo123', { expiresIn: '1h' });
-  res.json({ token });
-});
-
-app.get('/dados-sensiveis', auth, (req, res) => {
-  res.json({ segredo: 'Aqui está o dado sensível!' });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-  console.log(`Swagger em http://localhost:${PORT}/api-docs`);
-});
+export default firebaseApp;
